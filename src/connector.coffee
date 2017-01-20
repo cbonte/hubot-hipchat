@@ -233,6 +233,40 @@ module.exports = class Connector extends EventEmitter
     packet.c("body").t(message)
     @jabber.send packet
 
+  # Send a message to a room or a user, with HTML-IM support
+  #
+  # - `targetJid`: Target
+  #    - Message to a room: `????_????@conf.hipchat.com`
+  #    - Private message to a user: `????_????@chat.hipchat.com`
+  # - `message`: Message to be sent to the room
+  # - `html`: HTML message to be sent to the room, following http://www.xmpp.org/extensions/xep-0071.html
+  # TODO : temporary method for debugging purpose, merge with "message" will be needed
+  messageHtml: (targetJid, message, html) ->
+    parsedJid = new xmpp.JID targetJid
+
+    if parsedJid.domain is @mucDomain
+      packet = new xmpp.Element "message",
+        to: "#{targetJid}/#{@name}"
+        type: "groupchat"
+    else
+      packet = new xmpp.Element "message",
+        to: targetJid
+        type: "chat"
+        from: @jid
+      packet.c "inactive", xmlns: "http://jabber/protocol/chatstates"
+    # we should make sure that the message is properly escaped
+    # based on http://unix.stackexchange.com/questions/111899/how-to-strip-color-codes-out-of-stdout-and-pipe-to-file-and-stdout
+    message = message.replace(/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[mGK]/g, "")  # remove bash color codes
+    @logger.debug 'building message'
+    @logger.debug message
+    packet.c("body").t(message)
+    if html
+        packet.c("html", xmlns: 'http://jabber.org/protocol/xhtml-im')
+              .c("body", xmlns: 'http://www.w3.org/1999/xhtml')
+              .t(xmpp.parse(html))
+
+    @jabber.send packet
+
   # Send a topic change message to a room
   #
   # - `targetJid`: Target

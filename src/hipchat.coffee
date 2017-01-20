@@ -32,7 +32,13 @@ class HipChat extends Adapter
       return @logger.error "ERROR: Not sure who to send to: envelope=#{inspect envelope}"
 
     for str in strings
-      @connector.message target_jid, str
+        if typeof(str) == "string"
+            @connector.message target_jid, str
+        else
+            arr = str
+            str = arr[0]
+            html = arr[1]
+            @connector.messageHtml target_jid, str, html
 
   topic: (envelope, message) ->
     {user, room} = envelope
